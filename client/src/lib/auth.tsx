@@ -6,19 +6,11 @@ import {
   signOut as firebaseSignOut, 
   onAuthStateChanged,
   User as FirebaseUser,
-  UserCredential,
-  getAuth,
-  Auth,
-  GoogleAuthProvider
+  UserCredential
 } from "firebase/auth";
 import { useLocation } from "wouter";
 import { apiRequest } from "./queryClient";
-import app from "./firebase";
-
-// Make sure we have auth instance
-const auth: Auth = getAuth(app);
-// Create Google provider
-const googleProvider = new GoogleAuthProvider();
+import { auth, googleProvider } from "./firebase";
 
 interface AuthContextType {
   user: FirebaseUser | null;
