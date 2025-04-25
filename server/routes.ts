@@ -1,7 +1,10 @@
 import express, { Request, Response } from 'express';
 import pool from './db'; // Import the database connection
 
+
 const router = express.Router();
+
+
 
 // Route 1: Fetch all users
 router.get('/users', async (req: Request, res: Response) => {
