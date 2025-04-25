@@ -46,6 +46,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Specific user routes (must come before generic parametrized routes)
+  app.get("/api/users/email/:email", async (req: Request, res: Response) => {
+    const { email } = req.params;
+    
+    const user = await storage.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    res.json(user);
+  });
+
+  app.get("/api/users/role/:role", async (req: Request, res: Response) => {
+    const { role } = req.params;
+    const users = await storage.getUsersByRole(role);
+    res.json(users);
+  });
+
+  // Generic user route (must come after specific routes)
   app.get("/api/users/:id", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) {
@@ -58,12 +77,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.json(user);
-  });
-
-  app.get("/api/users/role/:role", async (req: Request, res: Response) => {
-    const { role } = req.params;
-    const users = await storage.getUsersByRole(role);
-    res.json(users);
   });
 
   // Water Request routes
@@ -82,20 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(requests);
   });
 
-  app.get("/api/requests/:id", async (req: Request, res: Response) => {
-    const requestId = parseInt(req.params.id);
-    if (isNaN(requestId)) {
-      return res.status(400).json({ message: "Invalid request ID" });
-    }
-    
-    const request = await storage.getWaterRequest(requestId);
-    if (!request) {
-      return res.status(404).json({ message: "Request not found" });
-    }
-    
-    res.json(request);
-  });
-
+  // Specific request routes (must come before generic parametrized routes)
   app.get("/api/requests/user/:userId", async (req: Request, res: Response) => {
     const userId = parseInt(req.params.userId);
     if (isNaN(userId)) {
@@ -120,6 +120,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { status } = req.params;
     const requests = await storage.getWaterRequestsByStatus(status);
     res.json(requests);
+  });
+
+  // Generic request route (must come after specific routes)
+  app.get("/api/requests/:id", async (req: Request, res: Response) => {
+    const requestId = parseInt(req.params.id);
+    if (isNaN(requestId)) {
+      return res.status(400).json({ message: "Invalid request ID" });
+    }
+    
+    const request = await storage.getWaterRequest(requestId);
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+    
+    res.json(request);
   });
 
   app.patch("/api/requests/:id", async (req: Request, res: Response) => {
@@ -188,6 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(anomalies);
   });
 
+  // Specific anomaly routes (must come before generic parametrized routes)
   app.get("/api/anomalies/request/:requestId", async (req: Request, res: Response) => {
     const requestId = parseInt(req.params.requestId);
     if (isNaN(requestId)) {
