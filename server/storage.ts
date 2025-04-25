@@ -13,6 +13,8 @@ import {
   type Anomaly,
   type InsertAnomaly
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -44,178 +46,124 @@ export interface IStorage {
   resolveAnomaly(id: number): Promise<Anomaly | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private waterRequests: Map<number, WaterRequest>;
-  private driverLocations: Map<number, DriverLocation>;
-  private anomalies: Map<number, Anomaly>;
-  private userIdCounter: number;
-  private requestIdCounter: number;
-  private locationIdCounter: number;
-  private anomalyIdCounter: number;
-
-  constructor() {
-    this.users = new Map();
-    this.waterRequests = new Map();
-    this.driverLocations = new Map();
-    this.anomalies = new Map();
-    this.userIdCounter = 1;
-    this.requestIdCounter = 1;
-    this.locationIdCounter = 1;
-    this.anomalyIdCounter = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email
-    );
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const now = new Date();
-    const user: User = { 
-      ...insertUser, 
-      id,
-      createdAt: now
-    };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async getUsersByRole(role: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(user => user.role === role);
+    return await db.select().from(users).where(eq(users.role, role));
   }
 
   // Water Request methods
   async getWaterRequest(id: number): Promise<WaterRequest | undefined> {
-    return this.waterRequests.get(id);
+    const [request] = await db.select().from(waterRequests).where(eq(waterRequests.id, id));
+    return request;
   }
 
   async getWaterRequestById(requestId: string): Promise<WaterRequest | undefined> {
-    return Array.from(this.waterRequests.values()).find(
-      (request) => request.requestId === requestId
-    );
+    const [request] = await db.select().from(waterRequests).where(eq(waterRequests.requestId, requestId));
+    return request;
   }
 
   async createWaterRequest(insertRequest: InsertWaterRequest): Promise<WaterRequest> {
-    const id = this.requestIdCounter++;
-    const now = new Date();
-    const request: WaterRequest = {
-      ...insertRequest,
-      id,
-      status: "pending",
-      createdAt: now,
-      acceptedAt: null,
-      inTransitAt: null,
-      deliveredAt: null,
-      rating: null,
-      feedback: null,
-      driverId: null
-    };
-    this.waterRequests.set(id, request);
+    const [request] = await db.insert(waterRequests)
+      .values({
+        ...insertRequest,
+        status: "pending",
+      })
+      .returning();
     return request;
   }
 
   async updateWaterRequest(id: number, updateData: Partial<UpdateWaterRequest>): Promise<WaterRequest | undefined> {
-    const request = this.waterRequests.get(id);
-    if (!request) return undefined;
-
-    const updatedRequest = { ...request, ...updateData };
-    this.waterRequests.set(id, updatedRequest);
+    const [updatedRequest] = await db.update(waterRequests)
+      .set(updateData)
+      .where(eq(waterRequests.id, id))
+      .returning();
     return updatedRequest;
   }
 
   async getUserWaterRequests(userId: number): Promise<WaterRequest[]> {
-    return Array.from(this.waterRequests.values()).filter(
-      (request) => request.userId === userId
-    );
+    return await db.select().from(waterRequests).where(eq(waterRequests.userId, userId));
   }
 
   async getDriverWaterRequests(driverId: number): Promise<WaterRequest[]> {
-    return Array.from(this.waterRequests.values()).filter(
-      (request) => request.driverId === driverId
-    );
+    return await db.select().from(waterRequests).where(eq(waterRequests.driverId, driverId));
   }
 
   async getWaterRequestsByStatus(status: string): Promise<WaterRequest[]> {
-    return Array.from(this.waterRequests.values()).filter(
-      (request) => request.status === status
-    );
+    return await db.select().from(waterRequests).where(eq(waterRequests.status, status));
   }
 
   async getAllWaterRequests(): Promise<WaterRequest[]> {
-    return Array.from(this.waterRequests.values());
+    return await db.select().from(waterRequests);
   }
 
   // Driver Location methods
   async createDriverLocation(insertLocation: InsertDriverLocation): Promise<DriverLocation> {
-    const id = this.locationIdCounter++;
-    const now = new Date();
-    const location: DriverLocation = {
-      ...insertLocation,
-      id,
-      timestamp: now
-    };
-    this.driverLocations.set(id, location);
+    const [location] = await db.insert(driverLocations)
+      .values(insertLocation)
+      .returning();
     return location;
   }
 
   async getLatestDriverLocation(driverId: number): Promise<DriverLocation | undefined> {
-    const driverLocations = Array.from(this.driverLocations.values())
-      .filter(location => location.driverId === driverId)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    
-    return driverLocations.length > 0 ? driverLocations[0] : undefined;
+    const [location] = await db.select()
+      .from(driverLocations)
+      .where(eq(driverLocations.driverId, driverId))
+      .orderBy(desc(driverLocations.timestamp))
+      .limit(1);
+    return location;
   }
 
   async getAllDriverLocations(): Promise<DriverLocation[]> {
-    return Array.from(this.driverLocations.values());
+    return await db.select().from(driverLocations);
   }
 
   // Anomaly methods
   async createAnomaly(insertAnomaly: InsertAnomaly): Promise<Anomaly> {
-    const id = this.anomalyIdCounter++;
-    const now = new Date();
-    const anomaly: Anomaly = {
-      ...insertAnomaly,
-      id,
-      resolved: false,
-      createdAt: now
-    };
-    this.anomalies.set(id, anomaly);
+    const [anomaly] = await db.insert(anomalies)
+      .values({
+        ...insertAnomaly,
+        resolved: false
+      })
+      .returning();
     return anomaly;
   }
 
   async getAnomaliesByRequestId(requestId: number): Promise<Anomaly[]> {
-    return Array.from(this.anomalies.values()).filter(
-      (anomaly) => anomaly.requestId === requestId
-    );
+    return await db.select().from(anomalies).where(eq(anomalies.requestId, requestId));
   }
 
   async getAllAnomalies(): Promise<Anomaly[]> {
-    return Array.from(this.anomalies.values());
+    return await db.select().from(anomalies);
   }
 
   async resolveAnomaly(id: number): Promise<Anomaly | undefined> {
-    const anomaly = this.anomalies.get(id);
-    if (!anomaly) return undefined;
-
-    const resolvedAnomaly = { ...anomaly, resolved: true };
-    this.anomalies.set(id, resolvedAnomaly);
-    return resolvedAnomaly;
+    const [anomaly] = await db.update(anomalies)
+      .set({ resolved: true })
+      .where(eq(anomalies.id, id))
+      .returning();
+    return anomaly;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
