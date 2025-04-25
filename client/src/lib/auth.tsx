@@ -110,22 +110,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setError(null);
+      // Use popup for Google Sign-In
       const result = await signInWithPopup(auth, googleProvider);
       
       // Check if user exists in backend, if not create one
       try {
         const response = await fetch(`/api/users/email/${result.user.email}`);
         if (!response.ok) {
-          // User doesn't exist, create one
+          // User doesn't exist, create one with appropriate fields
+          const names = result.user.displayName?.split(' ') || ['User'];
+          const firstName = names[0];
+          const lastName = names.length > 1 ? names.slice(1).join(' ') : '';
+          
           await apiRequest("POST", "/api/users", {
             email: result.user.email!,
             username: result.user.email!.split("@")[0],
-            password: "firebase-auth",
+            password: "firebase-auth", // Just a placeholder
             role: "resident", // Default role for Google sign-ins
-            firstName: result.user.displayName?.split(" ")[0] || "",
-            lastName: result.user.displayName?.split(" ").slice(1).join(" ") || "",
-            profileImageUrl: result.user.photoURL
+            firstName: firstName,
+            lastName: lastName,
+            profileImageUrl: result.user.photoURL || ''
           });
+          
+          console.log("New user created for Google sign-in:", result.user.email);
+        } else {
+          console.log("Existing user found for Google sign-in:", result.user.email);
         }
       } catch (err) {
         console.error("Error checking/creating user in backend:", err);
@@ -133,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       return result;
     } catch (err: any) {
+      console.error("Google sign-in error:", err);
       setError(err.message);
       throw err;
     }

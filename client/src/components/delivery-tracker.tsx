@@ -2,7 +2,12 @@ import { WaterRequest } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapIcon } from "lucide-react";
+import { MapIcon, Droplet } from "lucide-react";
+
+// Water Drop Icon Component
+const WaterDropIcon = ({ className }: { className?: string }) => {
+  return <Droplet className={className} />;
+};
 
 interface DeliveryTrackerProps {
   activeDeliveries: WaterRequest[];
