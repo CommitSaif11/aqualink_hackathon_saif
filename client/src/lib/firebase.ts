@@ -31,8 +31,15 @@ const auth = getAuth(app);
 
 // Initialize Google Provider
 const googleProvider = new GoogleAuthProvider();
+
+// Add Google OAuth scopes required by your app
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
+
+// Configure Google Provider with custom parameters
 googleProvider.setCustomParameters({
-  prompt: 'select_account'
+  prompt: 'select_account',
+  login_hint: 'user@example.com'
 });
 
 export { auth, googleProvider };

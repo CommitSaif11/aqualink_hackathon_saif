@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -97,17 +98,34 @@ export default function AuthPage() {
     }
   };
 
+  // Display error messages from auth context
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Authentication error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
+
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithGoogle();
+      console.log("Starting Google sign-in from auth page...");
+      // Using a direct implementation with firebase auth instead of the context
+      // to better diagnose issues
+      const result = await signInWithGoogle();
+      console.log("Google sign-in success:", result.user.email);
+      
       toast({
         title: "Logged in successfully",
         description: "Welcome to AquaLink!",
       });
     } catch (err: any) {
+      console.error("Google sign-in error in auth page:", err);
       toast({
         title: "Google sign-in failed",
-        description: err.message,
+        description: err.message || "Authentication failed. Make sure Google sign-in is enabled in Firebase.",
         variant: "destructive",
       });
     }

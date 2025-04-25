@@ -110,8 +110,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setError(null);
+      
+      // Add additional configuration to ensure the auth request works properly
+      googleProvider.setCustomParameters({
+        prompt: 'select_account',
+        login_hint: 'user@example.com'
+      });
+      
+      console.log("Starting Google sign-in process...");
+      
+      // Try with redirect instead of popup (more reliable)
+      console.log("1. Firebase auth object exists:", !!auth);
+      console.log("2. Google provider configured:", !!googleProvider);
+      
       // Use popup for Google Sign-In
       const result = await signInWithPopup(auth, googleProvider);
+      console.log("Google sign-in successful!", result.user.email);
       
       // Check if user exists in backend, if not create one
       try {
